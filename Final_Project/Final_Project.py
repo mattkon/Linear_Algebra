@@ -23,16 +23,13 @@
 
 import csv # https://docs.python.org/2/library/csv.html
 import time #https://docs.python.org/2/library/time.html
-
-
-
-
+import numpy as np
 
 
 
 ### FUNCTIONS ###
 
-#creates an nxn sparse matrix. Matrix entry data is filled in at the corresponding i and j locations. All non specified entries are zero.
+#creates an nxn sparse matrix. Matrix entry data is filled in at the corresponding i (row) and j (vector) locations. All non specified entries are zero.
 def assemble_sparse_matrix(i,j,data,size):
     matrix = [[0 for x in range(size)] for y in range(size)] #creates empty array of the proper dimensions
     for x in range (0,len(i)): matrix[i[x]][j[x]] = data[x]
@@ -52,7 +49,7 @@ def write_csv(path,i,j,data,mtx_size):
         writer.writerow(row)
     csv_file.close()
 
-#loads the i, j, and data vectors from a sparse rom matrix.
+#loads the i, j, and data vectors from a sparse row matrix.
 def load_csv(path):
     csv_file = open(path, 'rt')
     reader = csv.reader(csv_file)
@@ -70,11 +67,38 @@ def load_csv(path):
     csv_file.close()
     return i,j,data,mtx_size
 
-#performs the multiplication of two nested row matrices.
-def matrix_mult(A,B):
-    print('\n'.join([''.join(['{:4}'.format(item) for item in row]) for row in A]))
-    print('\n'.join([''.join(['{:4}'.format(item) for item in row]) for row in B]))
+#Transposes a matrix
+def transpose(mtx):
+    mtxT = map(list, zip(*mtx))
+    return mtxT
 
+#input is a nested list matrix, output is the CSR vectors
+def return_data_vectors(mtx):
+    size = (len(mtx))
+    data = [num for num in [item for sublist in mtx for item in sublist] if num] # flattens the nested matrix to a list, then extracts only the non zero entries
+    i = np.nonzero(mtx)[0]
+    j = np.nonzero(mtx)[1]
+    print(i,j,data,size)
+    return i,j,data,size
+
+def symmetric_check(mtx):
+    return (mtx.transpose() == mtx).all()
+
+
+
+
+
+
+# setup matrix A
+i,j,data,size = [0, 3, 5, 6, 7],[1, 2, 4, 5, 6],[7, 7, 7, 7, 7],8
+write_csv('MTX_A.csv',i,j,data,size) #writes to csv file
+i,j,data,mtx_size = load_csv('MTX_A.csv')
+A = assemble_sparse_matrix(i,j,data,size) #creates a sparse matrix from i, j, data vectors
+# setup matrix B
+i,j,data,size = [2, 3, 4, 6, 6],[1, 2, 1, 5, 6],[8, 8, 8, 8, 8],8
+write_csv('MTX_B.csv',i,j,data,size) #writes to csv file
+i,j,data,mtx_size = load_csv('MTX_B.csv')
+B = assemble_sparse_matrix(i,j,data,size) #creates a sparse matrix from i, j, data vectors
 
 
 
@@ -82,35 +106,37 @@ def matrix_mult(A,B):
 
 #### PART 1 - Basic Matrix Operations ####
 
-# setup
-
-size = 8
-i = [0, 3, 5, 6, 7] #
-j = [1, 2, 4, 5, 6]
-data = [7, 7, 7, 7, 7]
-path = 'MTX_A.csv'
-
 # - Read Matrix A
-write_csv(path,i,j,data,size) #writes the information we just described to a csv file
-i,j,data,mtx_size = load_csv(path) #loads the csv file we created
-mtx_A = assemble_sparse_matrix(i,j,data,size) #creates a sparse matrix from i, j, data vectors
-display_matrix(mtx_A) #displays the matrix
+display_matrix(A) #displays the matrix
 
 # - Perform A times a vector
+v = [1, 1, 1, 1, 1, 1, 1, 1]
+result = np.dot(A,v)
+print result
 
 # - Perform AT times a vector
+AT = transpose(A)
+result = np.dot(AT,v)
+print result
 
 # - Geven A in CSR format generate AT in the same format using minimum operations
+display_matrix(AT)
 
 # - Given two matrices A and B in CSR format, compute C = AB and store it also in CSR format.
+C = np.dot(A,B)
+i,j,data,size = return_data_vectors(C)
+write_csv('MTX_C.csv',i,j,data,size) #writes the information to a csv file
 
 # - Produce B = AT in CSR format.
+B = transpose(A)
+#show B in CSR format
+i,j,data,size = return_data_vectors(B)
+write_csv('MTX_B.csv',i,j,data,size)
 
 # - Compute C = AB. Check if C is symmetric.
-
-
-
-
+C = np.dot(A,B)
+print C
+print 'Matrix Symmetry: ',symmetric_check(C)
 
 
 
