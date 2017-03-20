@@ -152,7 +152,6 @@ print mtx_x
 
 #Perform GMRES with b = random vector
 b = np.random.random(size) #creates random solution vector
-for x in range (0,size): b[x] = random.randint (0,1)
 print '\n', 'vector b'
 print b
 
@@ -171,7 +170,7 @@ print 'Iterations in each cycle: ', m_max
 print 'Restarts: ',  rest
 print 'Total iterations: ', rest*m_max
 print 'Time to coverge: ', end - start, '[s]'
-print 'Residual', residual
+print 'Residual: ', residual
 print 'Final solution vector: '
 print result[m_max]
 
@@ -185,7 +184,7 @@ print 'Iterations in each cycle: ', m_max
 print 'Restarts: ',  rest
 print 'Total iterations: ', rest*m_max
 print 'Time to converge: ', end - start, '[s]'
-print 'Residual', residual
+print 'Residual: ', residual
 print 'Final solution vector: '
 print result[m_max]
 
@@ -199,7 +198,7 @@ print 'Iterations in each cycle: ', m_max
 print 'Restarts: ',  rest
 print 'Total iterations: ', rest*m_max
 print 'Time to converge: ', end - start, '[s]'
-print 'Residual', residual
+print 'Residual: ', residual
 print 'Final solution vector: '
 print result[m_max]
 
@@ -214,7 +213,7 @@ print 'Iterations in each cycle: ', m_max
 print 'Restarts: ',  rest
 print 'Total iterations: ', rest*m_max
 print 'Time to converge: ', end - start, '[s]'
-print 'Residual', residual
+print 'Residual: ', residual
 print 'Final solution vector: '
 print result[m_max]
 
@@ -229,6 +228,21 @@ print 'Iterations in each cycle: ', m_max
 print 'Restarts: ',  rest
 print 'Total iterations: ', rest*m_max
 print 'Time to converge: ', end - start, '[s]'
-print 'Residual', residual
+print 'Residual: ', residual
+print 'Final solution vector: '
+print result[m_max]
+
+
+#6) mmax = 200, e = 0.001
+m_max = 200
+start = time.time() #start timer
+result, rest, residual = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
+end = time.time() #end timer
+print '\n', 'Trial 6'
+print 'Iterations in each cycle: ', m_max
+print 'Restarts: ',  rest
+print 'Total iterations: ', rest*m_max
+print 'Time to converge: ', end - start, '[s]'
+print 'Residual: ', residual
 print 'Final solution vector: '
 print result[m_max]
