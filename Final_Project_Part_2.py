@@ -40,6 +40,7 @@
 # The algorithm will stop once ||b-A*x`|| < e, or m_max has been reached
 import math
 import random
+import time
 import csv
 import numpy as np
 import scipy as sp
@@ -65,6 +66,7 @@ def load_csv(path):
     num_entries = int(array[3])
     mtx_size = int(array[4])
     x = 0
+    i,j,data = [0]*(num_entries), [0]*(num_entries), [0]*(num_entries)
     while num_entries > 0:
         array = reader.next()
         i[x] = int(array[0])
@@ -79,28 +81,31 @@ def load_csv(path):
 
 def assemble_sparse_matrix(i,j,data,size):
     matrix = [[0 for x in range(size)] for y in range(size)] #creates empty array of the proper dimensions
-    for x in range (0,len(i)): matrix[i[x]][j[x]] = data[x]
+    for x in range (0,len(i)):
+        t,v = i[x] - 1, j[x] - 1
+        matrix[t][v] = float(data[x])
     return matrix
 
 
 
-def GMRES_(A, b, x0, e, m_max, restarts): #Finds numerical solution to a nonsymmetric system of linear equations. Useful for sparse matrices, because of the relatively low  systemmemory it requires.
+
+
+def GMRES_(A, b, x0, e, m_max, restart): #Finds numerical solution to a nonsymmetric system of linear equations. Useful for sparse matrices, because of the relatively low  systemmemory it requires.
     
     #initialize values
     x = [] # initializes return vector
     q = [0] * (m_max) # initializes Krylov subspace
-    h = np.zeros((m_max + 1, m_max)) #used in Arnoldi iteration
-    error = 1 #initializes
-    counter = 0
+    h = np.zeros((m_max + 1, m_max)) #used in Arnoldi iteration?
+    restartsleft = restart
     
     #begin
-    while error >= e and restarts != 0:
+    while restartsleft > 0:
         r = b - np.asarray(sp.dot(A, x0)).reshape(-1) # initial residual, reshaped to a vector
         x.append(r)
         q[0] = r / np.linalg.norm(r) #initial residual normalized
-    
-        #The Arnoldi iteration uses the stabilized Gram Schmidt process to find orthonormal vectors, q1, q2, q3, ..., called the Arnoldi vectors, such that for every n, q1, ..., qn span the Krylov subspace. Lots of help from https://en.wikipedia.org/wiki/Arnoldi_iteration pseudo-Algorithm
-    
+        
+        #The Arnoldi iteration uses the stabilized Gram Schmidt process to find orthonormal vectors, q1, q2, q3, ..., called the Arnoldi vectors, such that for every n, q1, ..., qn span the Krylov subspace. https://en.wikipedia.org/wiki/Arnoldi_iteration
+        
         for k in range(m_max): #changes from wikipedia algorithm: q[k] = q[k-1], y = q[k]
             y = np.asarray(sp.dot(A, q[k])).reshape(-1) #A.normalized residual
             for j in range(k):
@@ -108,24 +113,16 @@ def GMRES_(A, b, x0, e, m_max, restarts): #Finds numerical solution to a nonsymm
                 y = y - h[j, k] * q[j]
             h[k + 1, k] = np.linalg.norm(y)
             if (h[k + 1, k] != 0 and k != m_max - 1): q[k + 1] = y / h[k + 1, k] #q(k) = q(k)/h(k,k-1)
-
-
-
+            
             c = np.zeros(m_max + 1)
-            c[0] = np.linalg.norm(r) #b is [norm(r), 0, 0, ... 0]
-        
+            c[0] = np.linalg.norm(r) #c is [norm(r), 0, 0, ... 0]
             result = np.linalg.lstsq(h, c)[0]
             x.append(np.dot(np.asarray(q).transpose(), result) + x0)
-
-
-        error = np.linalg.norm(b - np.asarray(sp.dot(A, x[m_max])).reshape(-1))
-        x0 = x[m_max] #resets x0 in case of restart
-        restarts -= 1
-        counter+=1
-
-    return x, error, counter
-
-
+        
+        restartsleft -= 1
+        x0 = x[m_max] #resets x0 before next restart
+    
+    return x, restart-restartsleft
 
 
 
@@ -138,47 +135,92 @@ def generate_sparse_matrix(entries, size, location):
     write_csv(location,i,j,data,size) #writes to csv file
 
 
+
 #GMRES ALGORITHM
 
 ### SETUP ###
-entries = 100
-size = 10
-location = 'sparse.csv'
-i,j,data,b = [0]*(entries), [0]*(entries), [0]*(entries), [0]*(size)
-generate_sparse_matrix(entries,size,location) #generates sparse matrix, 100 entries, 100x100 matrix
-i,j,data,mtx_size = load_csv(location)
-A = assemble_sparse_matrix(i,j,data,size) #creates a sparse matrix from i, j, data vectors
-A = np.matrix(A)
-#Solution vector
+#Load mtx_494, mtx_662, or mtx_1138
+location = '1138.csv'
+i,j,data,size = load_csv(location)
+mtx_x = assemble_sparse_matrix(i,j,data,size)
+mtx_x = np.matrix(mtx_x) #creates a sparse matrix from i, j, data vectors
+print '\n', 'Matrix', location
+print mtx_x
+
+#Perform GMRES with b = random vector
 b = np.random.random(size) #creates random solution vector
-for x in range (0,size): b[x] = random.randint (0,9)
-#initial Approximation
-x0 = np.zeros(size)
-#tolerances
-e = 1e-05
-m_max = 100
-
-
-
-### BEGIN ###
-result,error,restarts = GMRES_(A, b, x0, e, m_max, 100)
-
-#print(result)
-print '\n', 'Matrix A'
-print A
-print '\n', 'solution vector b'
+for x in range (0,size): b[x] = random.randint (0,1)
+print '\n', 'vector b'
 print b
-print '\n', 'GMRES after', m_max, 'iterations is: '
+
+#1) mmax = 5, e = 0.001, number of iterations it took, time to convergence
+e = 1e-03 #tolerances
+m_max = 5
+restarts=100
+iterations=20
+for x in range (0,size): b[x] = random.randint (0,1) #modifies solution vector to ints 0-9
+x0 = np.zeros(size) #initial Approximation
+start = time.time() #start timer
+result, rest = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
+end = time.time() #end timer
+print '\n', 'Trial 1'
+print 'Iterations in each cycle: ', m_max
+print 'Restarts: ',  rest
+print 'Total iterations: ', rest*m_max
+print 'Time to coverge: ', end - start, '[s]'
+print 'Final solution vector: '
 print result[m_max]
-print '\n', 'error'
-print error
-print '\n', 'restarts'
-print  restarts
 
-#CHECK USING SCI PY
+#2) m_max = 10, e = 0.001
+m_max = 10
+start = time.time() #start timer
+result,restarts_left = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
+end = time.time() #end timer
+print '\n', 'Trial 2'
+print 'Iterations in each cycle: ', m_max
+print 'Restarts: ',  rest
+print 'Total iterations: ', rest*m_max
+print 'Time to converge: ', end - start, '[s]'
+print 'Final solution vector: '
+print result[m_max]
 
-from scipy.sparse.linalg import gmres
-result2 = gmres(A,b,x0,tol=e)
-print '\n', 'Check using Scipy: '
-print result2
+#3) mmax = 25, e = 0.001
+m_max = 25
+start = time.time() #start timer
+result,restarts_left = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
+end = time.time() #end timer
+print '\n', 'Trial 3'
+print 'Iterations in each cycle: ', m_max
+print 'Restarts: ',  rest
+print 'Total iterations: ', rest*m_max
+print 'Time to converge: ', end - start, '[s]'
+print 'Final solution vector: '
+print result[m_max]
 
+
+#4) mmax = 50, e = 0.001
+m_max = 50
+start = time.time() #start timer
+result,restarts_left = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
+end = time.time() #end timer
+print '\n', 'Trial 4'
+print 'Iterations in each cycle: ', m_max
+print 'Restarts: ',  rest
+print 'Total iterations: ', rest*m_max
+print 'Time to converge: ', end - start, '[s]'
+print 'Final solution vector: '
+print result[m_max]
+
+
+#5) mmax = 100, e = 0.001
+m_max = 100
+start = time.time() #start timer
+result,restarts_left = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
+end = time.time() #end timer
+print '\n', 'Trial 5'
+print 'Iterations in each cycle: ', m_max
+print 'Restarts: ',  rest
+print 'Total iterations: ', rest*m_max
+print 'Time to converge: ', end - start, '[s]'
+print 'Final solution vector: '
+print result[m_max]
