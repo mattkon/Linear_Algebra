@@ -97,9 +97,10 @@ def GMRES_(A, b, x0, e, m_max, restart): #Finds numerical solution to a nonsymme
     q = [0] * (m_max) # initializes Krylov subspace
     h = np.zeros((m_max + 1, m_max)) #used in Arnoldi iteration?
     restartsleft = restart
+    residual = 1
     
     #begin
-    while restartsleft > 0:
+    while restartsleft > 0 and residual > e:
         r = b - np.asarray(sp.dot(A, x0)).reshape(-1) # initial residual, reshaped to a vector
         x.append(r)
         q[0] = r / np.linalg.norm(r) #initial residual normalized
@@ -118,11 +119,13 @@ def GMRES_(A, b, x0, e, m_max, restart): #Finds numerical solution to a nonsymme
             c[0] = np.linalg.norm(r) #c is [norm(r), 0, 0, ... 0]
             result = np.linalg.lstsq(h, c)[0]
             x.append(np.dot(np.asarray(q).transpose(), result) + x0)
+            residual = np.linalg.norm(b - np.asarray(sp.dot(A, (np.dot(np.asarray(q).transpose(), result) + x0))).reshape(-1))
         
         restartsleft -= 1
         x0 = x[m_max] #resets x0 before next restart
     
-    return x, restart-restartsleft
+    return x, restart-restartsleft, residual
+
 
 
 
@@ -161,39 +164,42 @@ iterations=20
 for x in range (0,size): b[x] = random.randint (0,1) #modifies solution vector to ints 0-9
 x0 = np.zeros(size) #initial Approximation
 start = time.time() #start timer
-result, rest = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
+result, rest, residual = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
 end = time.time() #end timer
 print '\n', 'Trial 1'
 print 'Iterations in each cycle: ', m_max
 print 'Restarts: ',  rest
 print 'Total iterations: ', rest*m_max
 print 'Time to coverge: ', end - start, '[s]'
+print 'Residual', residual
 print 'Final solution vector: '
 print result[m_max]
 
 #2) m_max = 10, e = 0.001
 m_max = 10
 start = time.time() #start timer
-result,restarts_left = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
+result, rest, residual = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
 end = time.time() #end timer
 print '\n', 'Trial 2'
 print 'Iterations in each cycle: ', m_max
 print 'Restarts: ',  rest
 print 'Total iterations: ', rest*m_max
 print 'Time to converge: ', end - start, '[s]'
+print 'Residual', residual
 print 'Final solution vector: '
 print result[m_max]
 
 #3) mmax = 25, e = 0.001
 m_max = 25
 start = time.time() #start timer
-result,restarts_left = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
+result, rest, residual = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
 end = time.time() #end timer
 print '\n', 'Trial 3'
 print 'Iterations in each cycle: ', m_max
 print 'Restarts: ',  rest
 print 'Total iterations: ', rest*m_max
 print 'Time to converge: ', end - start, '[s]'
+print 'Residual', residual
 print 'Final solution vector: '
 print result[m_max]
 
@@ -201,13 +207,14 @@ print result[m_max]
 #4) mmax = 50, e = 0.001
 m_max = 50
 start = time.time() #start timer
-result,restarts_left = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
+result, rest, residual = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
 end = time.time() #end timer
 print '\n', 'Trial 4'
 print 'Iterations in each cycle: ', m_max
 print 'Restarts: ',  rest
 print 'Total iterations: ', rest*m_max
 print 'Time to converge: ', end - start, '[s]'
+print 'Residual', residual
 print 'Final solution vector: '
 print result[m_max]
 
@@ -215,12 +222,13 @@ print result[m_max]
 #5) mmax = 100, e = 0.001
 m_max = 100
 start = time.time() #start timer
-result,restarts_left = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
+result, rest, residual = GMRES_(mtx_x, b, x0, e, m_max, restarts) #(A, b, x0, e, m_max, initial_restarts):
 end = time.time() #end timer
 print '\n', 'Trial 5'
 print 'Iterations in each cycle: ', m_max
 print 'Restarts: ',  rest
 print 'Total iterations: ', rest*m_max
 print 'Time to converge: ', end - start, '[s]'
+print 'Residual', residual
 print 'Final solution vector: '
 print result[m_max]
