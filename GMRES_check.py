@@ -53,6 +53,7 @@ def GMRES(A, b, x0, e, m_max, restart): #Finds numerical solution to a nonsymmet
     h = np.zeros((m_max + 1, m_max)) #used in Arnoldi iteration?
     restartsleft = restart
     residual = 1
+    iterations = 0
 
     #begin
     while restartsleft > 0 and residual > e:
@@ -63,30 +64,33 @@ def GMRES(A, b, x0, e, m_max, restart): #Finds numerical solution to a nonsymmet
         #The Arnoldi iteration uses the stabilized Gram Schmidt process to find orthonormal vectors, q1, q2, q3, ..., called the Arnoldi vectors, such that for every n, q1, ..., qn span the Krylov subspace. https://en.wikipedia.org/wiki/Arnoldi_iteration
         
         for k in range(m_max): #changes from wikipedia algorithm: q[k] = q[k-1], y = q[k]
-            y = np.asarray(sp.dot(A, q[k])).reshape(-1) #A.normalized residual
-            for j in range(k):
-                h[j, k] = np.dot(q[j], y) #fills out the m+1 x m matrix with q(j).q(k)
-                y = y - h[j, k] * q[j]
-            h[k + 1, k] = np.linalg.norm(y)
-            if (h[k + 1, k] != 0 and k != m_max - 1): q[k + 1] = y / h[k + 1, k] #q(k) = q(k)/h(k,k-1)
+            if residual > e:
             
-            c = np.zeros(m_max + 1)
-            c[0] = np.linalg.norm(r) #c is [norm(r), 0, 0, ... 0]
-            result = np.linalg.lstsq(h, c)[0]
-            x.append(np.dot(np.asarray(q).transpose(), result) + x0)
-            residual = np.linalg.norm(b - np.asarray(sp.dot(A, (np.dot(np.asarray(q).transpose(), result) + x0))).reshape(-1))
-
-        restartsleft -= 1
-        x0 = x[m_max] #resets x0 before next restart
+                y = np.asarray(sp.dot(A, q[k])).reshape(-1) #A.normalized residual
+                for j in range(k):
+                    h[j, k] = np.dot(q[j], y) #fills out the m+1 x m matrix with q(j).q(k)
+                    y = y - h[j, k] * q[j]
+                h[k + 1, k] = np.linalg.norm(y)
+                if (h[k + 1, k] != 0 and k != m_max - 1): q[k + 1] = y / h[k + 1, k] #q(k) = q(k)/h(k,k-1)
+            
+                c = np.zeros(m_max + 1)
+                c[0] = np.linalg.norm(r) #c is [norm(r), 0, 0, ... 0]
+                result = np.linalg.lstsq(h, c)[0]
+                x.append(np.dot(np.asarray(q).transpose(), result) + x0)
+                residual = np.linalg.norm(b - np.asarray(sp.dot(A, (np.dot(np.asarray(q).transpose(), result) + x0))).reshape(-1))
+                iterations += 1
+        if residual > e:
+            restartsleft -= 1
+            x0 = x[-1:] #resets x0 before next restart
     
-    return x, restart-restartsleft, residual
+    return x, restart-restartsleft, residual, iterations
 
 
 
 #GMRES ALGORITHM
 
 #Matrix A , solution b, initial guess x0
-size = 6
+size = 10
 A = np.random.random((size, size)) #creates random 5x5 matrix
 b = np.random.random(size) #creates random solution vector
 x0 = np.zeros(size) #initial approximation. This might also be a random vector.
@@ -96,17 +100,17 @@ m_max = 100
 restart = 20
 #begin
 start = time.time() #start timer
-result, rest, residual = GMRES(A, b, x0, e, m_max, restart)
+result, rest, residual, iterations = GMRES(A, b, x0, e, m_max, restart)
 end = time.time() #end timer
 #print(result)
 print '\n', 'random', size, 'x', size, 'Matrix A: '
 print A
 print 'random solution vector b: '
 print b
-print '\n', 'GMRES: ', m_max, 'iterations per cycle,', rest, 'restarts, and', rest*m_max, 'total iterations'
+print '\n', 'GMRES: ', m_max, 'iterations per cycle,', rest, 'restarts, and', iterations, 'total iterations'
 print 'Time to coverge: ', end - start
 print 'residual: ', residual
-print result[m_max]
+print result[-1:]
 
 
 
